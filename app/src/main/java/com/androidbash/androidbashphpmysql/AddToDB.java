@@ -8,9 +8,14 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -18,6 +23,13 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
+
+import okhttp3.FormBody;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class AddToDB extends AppCompatActivity {
 
@@ -27,62 +39,49 @@ public class AddToDB extends AppCompatActivity {
         setContentView(R.layout.add_to_db);
     }
 
-    public void DoPost(View view){
-        String url = "http://csis.svsu.edu/~rcthoma3/cs403/movie_post.php";
+    public void DoPost(View view) {
         String movie_name = ((EditText) findViewById(R.id.editText)).getText().toString();
         String movie_genre = ((EditText) findViewById(R.id.editText2)).getText().toString();
-        PostClass postObj = new PostClass();
-        postObj.execute(url, movie_name, movie_genre);
-    }
-    public class PostClass extends AsyncTask<String, String, String> {
-        String urlString;
-        String movie_name;
-        String movie_genre;
+        String image_url = ((EditText) findViewById(R.id.editText3)).getText().toString();
 
-        @Override
-        protected String doInBackground(String... params) {
-            urlString = params[0];
-            movie_name = params[1];
-            movie_genre = params[2];
+        AsyncTask<String, Void, Void> asyncTask = new AsyncTask<String, Void, Void>() {
+            boolean RequestHappened = true;
 
-            OutputStream out = null;
-            try {
-                String data = URLEncoder.encode("movie_name", "UTF-8")
-                        + "=" + URLEncoder.encode(movie_name, "UTF-8");
-                data += "&" + URLEncoder.encode("movie_genre", "UTF-8")
-                        + "=" + URLEncoder.encode(movie_genre, "UTF-8");
+            @Override
+            protected Void doInBackground(String... params) {
 
-                URL url = new URL(urlString);
+                String moviename = params[0];
+                String moviegenre = params[1];
+                String imageurl = params[2];
 
-                HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+                OkHttpClient client = new OkHttpClient();
 
-                out = new BufferedOutputStream(urlConnection.getOutputStream());
+                RequestBody body = new FormBody.Builder()
+                        .add("movie_name", moviename)
+                        .add("movie_genre", moviegenre)
+                        .add("image_url", imageurl).build();
 
-                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(out, "UTF-8"));
-
-                writer.write(data);
-
-                writer.flush();
-
-                writer.close();
-
-                out.close();
-
-                urlConnection.connect();
-
-            } catch (Exception e) {
-                System.out.println(e.getMessage());
+                Request request = new Request.Builder()
+                        .url("http://csis.svsu.edu/~rcthoma3/cs403/movie_post.php")
+                        .post(body)
+                        .build();
+                try {
+                    Response response = client.newCall(request).execute();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    RequestHappened = false;
+                }
+                return null;
             }
-            return null;
-        }
-        protected void onPostExecute(String result)
-        {
-            Context context = getApplicationContext();
-            CharSequence text = movie_name;
-            int duration = Toast.LENGTH_SHORT;
+        };
 
-            Toast toast = Toast.makeText(context, text, duration);
-            toast.show();
-        }
+        asyncTask.execute(movie_name, movie_genre, image_url);
+
+        Context context = getApplicationContext();
+        CharSequence text = "Data sent!";
+        int duration = Toast.LENGTH_SHORT;
+
+        Toast toast = Toast.makeText(context, text, duration);
+        toast.show();
     }
 }
